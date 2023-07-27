@@ -1,7 +1,9 @@
 import illustration from '../images/login-illustration.svg'
 import { Button } from 'flowbite-react';
+import SweetAlert2 from "react-sweetalert2";
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
+import {register} from "../services/Auth";
 
 function Login () {
   const navigate = useNavigate();
@@ -10,6 +12,8 @@ function Login () {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [swalProps, setSwalProps] = useState({});
 
   const handleInputName = (event) => {
     const { value } = event.target
@@ -36,13 +40,68 @@ function Login () {
     setConfirmPassword(value)
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    navigate('/profile')
+
+    if (name === '' || email === '' || phone === '' || password === '' || confirmPassword === '') {
+      setSwalProps({
+        show: true,
+        title: 'Register Gagal',
+        text: 'Seluruh form register wajib diisi',
+        icon: 'error'
+      })
+
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setSwalProps({
+        show: true,
+        title: 'Register Gagal',
+        text: 'Seluruh form register wajib diisi',
+        icon: 'error'
+      });
+
+      return;
+    }
+
+    try {
+      const resp = await register({
+        data: {
+          name,
+          phone,
+          email,
+          password,
+          password_confirmation: confirmPassword,
+          role: 'general'
+        }
+      });
+
+      if (resp.status_code === 201) {
+        setSwalProps({
+          show: true,
+          title: 'Register Berhasil',
+          text: 'Silahkan login untuk mulai mencatat todo',
+          icon: 'success'
+        });
+      }
+
+
+    } catch (error) {
+      setSwalProps({
+        show: true,
+        title: 'Register Gagal',
+        text: 'Silahkan coba register kembali',
+        icon: 'error'
+      });
+
+      return;
+    }
   }
 
   return (
-    <div className="container">
+    <>
+      <div className="container">
       <div className="flex flex-col md:flex-row justify-center h-screen md:items-center">
         <div className="basis-full md:basis-1/2 flex p-3 md:p-5 lg:p-7">
           <img alt="illustration login" onDragStart={(event) => { event.preventDefault()}} src={illustration} className="my-auto"/>
@@ -79,6 +138,15 @@ function Login () {
         </div>
       </div>
     </div>
+      <SweetAlert2
+        { ...swalProps }
+        didClose={() => { setSwalProps({})} }
+        onConfirm={ () => { if(swalProps.icon === 'success') {
+          navigate('/');
+        } } }
+      />
+    </>
+
   )
 }
 

@@ -10,10 +10,6 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Home from "../pages/Home";
 import Profile from "../pages/Profile";
-import Calculator from "../pages/Calculator";
-import Temperature from "../pages/Temperature";
-import DynamicApi from "../pages/DynamicApi";
-import Mahasiswa from "../pages/Mahasiswa";
 
 const routes = [
   {
@@ -35,22 +31,6 @@ const routes = [
       {
         path: '/profile',
         element: <Profile />
-      },
-      {
-        path: '/calculator',
-        element: <Calculator />
-      },
-      {
-        path: '/temperature',
-        element: <Temperature />
-      },
-      {
-        path: '/dynamic-api',
-        element: <DynamicApi />
-      },
-      {
-        path: '/mahasiswa',
-        element: <Mahasiswa />
       }
     ]
   }

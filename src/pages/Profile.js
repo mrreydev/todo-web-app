@@ -1,11 +1,8 @@
 
-import Hero from "../componets/profile/Hero";
-import Skills from "../componets/profile/Skills";
 function Profile () {
   return (
     <>
-      <Hero />
-      <Skills />
+      <h1>Profile</h1>
     </>
   )
 }
