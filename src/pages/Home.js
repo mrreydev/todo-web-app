@@ -97,7 +97,7 @@ function Home () {
                   type="text"
                   className="w-96 me-4"
                   onInput={handleInputSearch}
-                  ={handleChangeSearch}
+                  onChange={handleChangeSearch}
                   value={inputSearch}
                 />
                 <Button color="purple" onClick={function() { handleOpenForm(true) }} >Tambah Todo</Button>
