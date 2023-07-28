@@ -26,7 +26,7 @@ function Home () {
   const [editedTodo, setEditedTodo] = useState({});
 
   useEffect(() => {
-    if (filterSelect != '') {
+    if (filterSelect !== '') {
       clearTodos();
     }
   }, [filterSelect]);
