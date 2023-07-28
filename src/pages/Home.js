@@ -5,7 +5,7 @@ import {useEffect, useState} from "react";
 import InfiniteScroll from 'react-infinite-scroller';
 import { TextInput } from 'flowbite-react';
 import { FaSearch } from 'react-icons/fa';
-import {getTodos} from "../services/Todo";
+import {createTodo, getTodos} from "../services/Todo";
 
 function Home () {
   const [openModalForm, setOpenModalForm] = useState(false);
@@ -65,7 +65,7 @@ function Home () {
     }
   }
 
-  const handleChangeSearch = (event) => {
+  const clearTodos = (event) => {
     setPage(1);
     setTotalPage(1);
     setTotalTodo(0);
@@ -79,6 +79,35 @@ function Home () {
 
   const handleCloseModal = (event) => {
     handleOpenForm(event);
+  }
+
+  const handleSaveTodo = async (form) => {
+    await handleCreateTodo(form);
+    clearTodos();
+  }
+
+  const handleCreateTodo = async (form) => {
+    try {
+      const payload = {
+        data: {
+          name: form.name,
+          description: form.description,
+          due_date: form.dueDate,
+          remind_me: form.remindMe,
+          important: form.important,
+          tasks: form.tasks.map((task) => {
+            return {
+              task: task.name,
+              finished: task.finished
+            }
+          })
+        }
+      }
+
+      const resp = await createTodo(payload);
+    } catch (error) {
+      console.log(error)
+    }
   }
 
 
@@ -97,7 +126,7 @@ function Home () {
                   type="text"
                   className="w-96 me-4"
                   onInput={handleInputSearch}
-                  onChange={handleChangeSearch}
+                  onChange={clearTodos}
                   value={inputSearch}
                 />
                 <Button color="purple" onClick={function() { handleOpenForm(true) }} >Tambah Todo</Button>
@@ -120,7 +149,7 @@ function Home () {
           </div>
         </div>
       </div>
-      <ModalFormTodo openModal={openModalForm} closeModal={handleCloseModal}/>
+      <ModalFormTodo openModal={openModalForm} closeModal={handleCloseModal} saveTodo={handleSaveTodo}/>
     </>
   )
 }
