@@ -1,5 +1,5 @@
 import { Button, Checkbox, Label, Modal, TextInput, Textarea  } from 'flowbite-react';
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { formatYMD } from './../utils';
 import { FaTrash } from 'react-icons/fa';
 import Datepicker from "tailwind-datepicker-react"
@@ -32,6 +32,8 @@ const options = {
 }
 
 function ModalFormTodo(props) {
+  const { editedData } = props;
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState('');
@@ -46,6 +48,15 @@ function ModalFormTodo(props) {
     }
   ]);
 
+
+
+  const edited = !!(props.editedData && Object.keys(props.editedData).length);
+
+
+  useEffect(() => {
+    setEditedForm()
+  }, [props.editedData])
+
   const handleInputName = (event) => {
     const { value } = event.target;
     setName(value);
@@ -57,7 +68,7 @@ function ModalFormTodo(props) {
   }
 
   const handleSetDueDate = (selectedDate) => {
-    setDueDate(selectedDate);
+    setDueDate(formatYMD(selectedDate));
   }
 
   const handleCloseInputDate = (value) => {
@@ -72,6 +83,11 @@ function ModalFormTodo(props) {
   const handleSetImportant = (event) => {
     const { checked } = event.target;
     setImportant(checked);
+  }
+
+  const handleCloseModal = (event) => {
+    handleResetForm();
+    props.closeModal(false);
   }
 
   const handleAddTask = (event) => {
@@ -110,23 +126,47 @@ function ModalFormTodo(props) {
   const handleResetForm = () => {
     setName('');
     setDescription('');
-    setDueDate(null);
+    setDueDate('');
     setRemindMe(false);
     setImportant(false);
     handleResetTask();
   };
+
+  const setEditedForm = () => {
+    if (edited) {
+      setName(editedData.name);
+      setDescription(editedData.description);
+      const dueDate = props.due_date === null ? '' : formatYMD(new Date(editedData.due_date));
+      setDueDate(dueDate);
+      setRemindMe(editedData.remind_me);
+      setImportant(editedData.important);
+
+      const editedTasks = editedData.tasks.map((task) => {
+        return {
+          id: task.id,
+          name: task.task,
+          finished: task.finished
+        }
+      })
+
+      setTasks(editedTasks);
+    }
+  }
 
 
   const saveTodo = (event) => {
     event.preventDefault();
 
     const resultForm = {
-      name,
-      description,
-      dueDate: formatYMD(dueDate),
-      remindMe,
-      important,
-      tasks
+      form: {
+        name,
+        description,
+        dueDate,
+        remindMe,
+        important,
+        tasks
+      },
+      action: edited ? 'edit' : 'add'
     };
 
     props.saveTodo(resultForm);
@@ -134,13 +174,19 @@ function ModalFormTodo(props) {
     props.closeModal(false);
   }
 
+  const deleteTodo = () => {
+    props.deleteTodo(editedData.id);
+    handleResetForm();
+    props.closeModal(false);
+  }
+
   return (
-    <Modal show={props.openModal === true} popup onClose={() => props.closeModal(false)}>
+    <Modal show={props.openModal === true} popup onClose={handleCloseModal}>
       <Modal.Header />
       <Modal.Body>
         <form action="#" onSubmit={saveTodo}>
         <div className="space-y-6">
-          <h3 className="text-xl font-medium text-gray-900 dark:text-white">{ props.edited ? 'Edit Todo' : 'Tambah Todo' }</h3>
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white">{ edited ? 'Edit Todo' : 'Tambah Todo' }</h3>
 
             <div>
               <div className="mb-2 block">
@@ -158,7 +204,15 @@ function ModalFormTodo(props) {
               <div className="mb-2 block">
                 <Label htmlFor="due-date" value="Tenggat waktu" />
               </div>
-              <Datepicker options={options} onChange={handleSetDueDate} show={showDate} setShow={handleCloseInputDate} />
+              {/*<Datepicker options={options} value={dueDate} onChange={handleSetDueDate} show={showDate} setShow={handleCloseInputDate} />*/}
+              <Datepicker options={options} onChange={handleSetDueDate} show={showDate} setShow={handleCloseInputDate}>
+                <div className="">
+                  <div className="">
+                    {/*<CalendarIcon />*/}
+                  </div>
+                  <TextInput type="text" className="" placeholder="WIng" value={dueDate} onFocus={() => {setShowDate(true)}} readOnly />
+                </div>
+              </Datepicker>
             </div>
             <div className="flex justify-start">
               <div className="flex items-center gap-2">
@@ -195,6 +249,11 @@ function ModalFormTodo(props) {
             </div>
             {/* END : LIST TASK */}
             <div className="flex justify-end w-full">
+              {
+                edited &&
+                <Button color="red" className="me-3" onClick={deleteTodo}>Hapus</Button>
+              }
+
               <Button color="purple" type="submit">Simpan</Button>
             </div>
         </div>

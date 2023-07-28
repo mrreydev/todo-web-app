@@ -1,13 +1,18 @@
 import CardTodo from "../componets/CardTodo";
 import ModalFormTodo from "../componets/ModalFormTodo";
-import { Button } from 'flowbite-react';
-import {useEffect, useState} from "react";
 import InfiniteScroll from 'react-infinite-scroller';
-import { TextInput } from 'flowbite-react';
 import { FaSearch } from 'react-icons/fa';
-import {createTodo, getTodos} from "../services/Todo";
+import SweetAlert2 from "react-sweetalert2";
+
+import { Button, TextInput, Select } from 'flowbite-react';
+import {useEffect, useState} from "react";
+
+import { createTodo, deleteTodo, getTodo, getTodos, updateTodo } from "../services/Todo";
+import { getErrorMessage } from "../utils";
 
 function Home () {
+  const [swalProps, setSwalProps] = useState({});
+
   const [openModalForm, setOpenModalForm] = useState(false);
   const [pageStart, setPageStart] = useState(0);
   const [page, setPage] = useState(1);
@@ -15,13 +20,16 @@ function Home () {
   const [totalTodo, setTotalTodo] = useState(0);
   const [totalPage, setTotalPage] = useState(1);
 
-
   const [todos, setTodos] = useState([]);
   const [inputSearch, setInputSearch] = useState('');
+  const [filterSelect, setFilterSelect] = useState('');
+  const [editedTodo, setEditedTodo] = useState({});
 
   useEffect(() => {
-    handleLoadMore();
-  }, []);
+    if (filterSelect != '') {
+      clearTodos();
+    }
+  }, [filterSelect]);
 
   const handleInputSearch = (event) => {
     const { value } = event.target
@@ -33,8 +41,14 @@ function Home () {
         params: {
           page,
           search: inputSearch,
-          per_page: 24
+          per_page: 24,
         }
+      }
+
+      if (filterSelect === 'important') {
+        payload.params = Object.assign(payload.params, {
+          important: true
+        })
       }
 
       const resp = await getTodos(payload);
@@ -61,7 +75,13 @@ function Home () {
       }
 
     } catch (error) {
-      console.log(error)
+      const errorMessage = getErrorMessage(error)
+      setSwalProps({
+        show: true,
+        title: 'Gagal menambah todo',
+        text: errorMessage,
+        icon: 'error'
+      })
     }
   }
 
@@ -81,8 +101,19 @@ function Home () {
     handleOpenForm(event);
   }
 
-  const handleSaveTodo = async (form) => {
-    await handleCreateTodo(form);
+  const handleChangeSelectFilter = (event) => {
+    const { value } = event.target;
+    setFilterSelect(value);
+  }
+
+
+  const handleSaveTodo = async (result) => {
+    if (result.action === 'add') {
+      await handleCreateTodo(result.form);
+    } else if (result.action === 'edit') {
+      await handleEditTodo(result.form);
+    }
+
     clearTodos();
   }
 
@@ -105,8 +136,106 @@ function Home () {
       }
 
       const resp = await createTodo(payload);
+      setSwalProps({
+        show: true,
+        title: 'Berhasil menambah todo',
+        text: resp.message,
+        icon: 'success'
+      });
+
     } catch (error) {
-      console.log(error)
+      const errorMessage = getErrorMessage(error);
+      setSwalProps({
+        show: true,
+        title: 'Gagal menambah todo',
+        text: errorMessage,
+        icon: 'error'
+      })
+    }
+  }
+
+  const handleEditTodo = async (form) => {
+    try {
+      const payload = {
+        id: editedTodo.id,
+        data: {
+          name: form.name,
+          description: form.description,
+          due_date: form.dueDate,
+          remind_me: form.remindMe,
+          important: form.important,
+          tasks: form.tasks.map((task) => {
+            return {
+              id: task.id,
+              task: task.name,
+              finished: task.finished
+            }
+          })
+        }
+      }
+
+      const resp = await updateTodo(payload);
+      setSwalProps({
+        show: true,
+        title: 'Berhasil mengubah todo',
+        text: resp.message,
+        icon: 'success'
+      });
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setSwalProps({
+        show: true,
+        title: 'Gagal megubah todo',
+        text: errorMessage,
+        icon: 'error'
+      });
+    }
+  }
+
+  const clickTodo = async (value) => {
+    await handleGetTodo(value.id)
+  }
+
+  const handleGetTodo = async  (id) => {
+    try {
+      const resp = await getTodo({
+        id
+      });
+
+      setEditedTodo(resp.data);
+      setOpenModalForm(true);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setSwalProps({
+        show: true,
+        title: 'Gagal menghapus todo',
+        text: errorMessage,
+        icon: 'error'
+      });
+    }
+  }
+
+  const handleDeleteTodo = async (id) => {
+    try {
+      const resp = await deleteTodo({
+        id
+      })
+
+      clearTodos();
+      setSwalProps({
+        show: true,
+        title: 'Berhasil menghapus todo',
+        text: resp.message,
+        icon: 'success'
+      });
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setSwalProps({
+        show: true,
+        title: 'Gagal menghapus todo',
+        text: errorMessage,
+        icon: 'error'
+      });
     }
   }
 
@@ -129,6 +258,19 @@ function Home () {
                   onChange={clearTodos}
                   value={inputSearch}
                 />
+                <Select
+                  id="filter"
+                  className="me-4"
+                  onChange={handleChangeSelectFilter}
+                  value={filterSelect}
+                >
+                  <option value="all">
+                    Semua
+                  </option>
+                  <option value="important">
+                    Important
+                  </option>
+                </Select>
                 <Button color="purple" onClick={function() { handleOpenForm(true) }} >Tambah Todo</Button>
               </div>
             </div>
@@ -141,7 +283,7 @@ function Home () {
               <div className="grid grid-cols-4 gap-4">
                 {
                   todos.map((todo, index) => {
-                    return <CardTodo key={index} todo={todo} />
+                    return <CardTodo onClick={() => {clickTodo(todo)}} key={index} todo={todo} />
                   })
                 }
               </div>
@@ -149,7 +291,14 @@ function Home () {
           </div>
         </div>
       </div>
-      <ModalFormTodo openModal={openModalForm} closeModal={handleCloseModal} saveTodo={handleSaveTodo}/>
+      <ModalFormTodo
+        openModal={openModalForm}
+        editedData={editedTodo}
+        closeModal={handleCloseModal}
+        saveTodo={handleSaveTodo}
+        deleteTodo={handleDeleteTodo}
+      />
+      <SweetAlert2 { ...swalProps } didClose={function () { setSwalProps({})} }/>
     </>
   )
 }
